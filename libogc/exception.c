@@ -40,14 +40,9 @@ distribution.
 
 #include "system.h"
 
-#include "gx.h"
-#include "pad.h"
 #include "consol.h"
 #include "console.h"
-#include "lwp_threads.h"
 #include "ios.h"
-
-#include "ogc/video_types.h"
 
 //#define _EXC_DEBUG
 
@@ -195,44 +190,44 @@ void __exception_setreload(int t)
 	reload_timer = t*50;
 }
 
-static void waitForReload(void)
-{
-	u32 level;
-
-	PAD_Init();
-	
-	if(reload_timer > 0)
-		kprintf("\n\tReloading in %d seconds\n", reload_timer/50);
-
-	while ( 1 )
-	{
-		PAD_ScanPads();
-
-		int buttonsDown = PAD_ButtonsDown(0);
-
-		if( (buttonsDown & PAD_TRIGGER_Z) || SYS_ResetButtonDown() || 
-			reload_timer == 0 )
-		{
-			kprintf("\n\tReload\n\n\n");
-			_CPU_ISR_Disable(level);
-			__reload ();
-		}
-
-		if ( buttonsDown & PAD_BUTTON_A )
-		{
-			kprintf("\n\tReset\n\n\n");
-#if defined(HW_DOL)
-			SYS_ResetSystem(SYS_HOTRESET,0,FALSE);
-#else
-			__reload ();
-#endif
-		}
-
-		udelay(20000);
-		if(reload_timer > 0)
-			reload_timer--;
-	}
-}
+//static void waitForReload(void)
+//{
+//	u32 level;
+//
+//	PAD_Init();
+//
+//	if(reload_timer > 0)
+//		kprintf("\n\tReloading in %d seconds\n", reload_timer/50);
+//
+//	while ( 1 )
+//	{
+//		PAD_ScanPads();
+//
+//		int buttonsDown = PAD_ButtonsDown(0);
+//
+//		if( (buttonsDown & PAD_TRIGGER_Z) || SYS_ResetButtonDown() ||
+//			reload_timer == 0 )
+//		{
+//			kprintf("\n\tReload\n\n\n");
+//			_CPU_ISR_Disable(level);
+//			__reload ();
+//		}
+//
+//		if ( buttonsDown & PAD_BUTTON_A )
+//		{
+//			kprintf("\n\tReset\n\n\n");
+//#if defined(HW_DOL)
+//			SYS_ResetSystem(SYS_HOTRESET,0,FALSE);
+//#else
+//			__reload ();
+//#endif
+//		}
+//
+//		udelay(20000);
+//		if(reload_timer > 0)
+//			reload_timer--;
+//	}
+//}
 
 //just implement core for unrecoverable exceptions.
 void c_default_exceptionhandler(frame_context *pCtx)

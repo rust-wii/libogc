@@ -34,7 +34,7 @@ distribution.
 #include "cache.h"
 #include "context.h"
 #include "processor.h"
-#include "lwp_threads.h"
+//#include "lwp_threads.h"
 #include "irq.h"
 #include "console.h"
 

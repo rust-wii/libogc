@@ -7,8 +7,6 @@
  *
  */
 
-#include "gx_struct.h"
-
 /* macros to support old function names */
 #define console_init     CON_Init
 #define SYS_ConsoleInit  CON_InitEx
@@ -41,7 +39,7 @@ void CON_Init(void *framebuffer,int xstart,int ystart,int xres,int yres,int stri
  *
  * \return 0 on success, <0 on error
  */
-s32 CON_InitEx(GXRModeObj *rmode, s32 conXOrigin,s32 conYOrigin,s32 conWidth,s32 conHeight);
+// s32 CON_InitEx(GXRModeObj *rmode, s32 conXOrigin,s32 conYOrigin,s32 conWidth,s32 conHeight);
 
 /*!
  * \fn CON_GetMetrics(int *cols, int *rows)
@@ -67,7 +65,7 @@ void CON_GetPosition(int *cols, int *rows);
  * \fn CON_EnableGecko(int channel, int safe)
  * \brief Enable or disable the USB gecko console.
  *
- * \param[in] channel EXI channel, or -1 ¨to disable the gecko console
+ * \param[in] channel EXI channel, or -1 ï¿½to disable the gecko console
  * \param[in] safe If true, use safe mode (wait for peer)
  *
  * \return none

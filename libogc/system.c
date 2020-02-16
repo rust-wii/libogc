@@ -44,18 +44,17 @@ distribution.
 #include "stm.h"
 #include "es.h"
 #include "conf.h"
-#include "wiilaunch.h"
 #endif
 #include "cache.h"
-#include "video.h"
+//#include "video.h"
 #include "system.h"
 #include "sys_state.h"
-#include "lwp_threads.h"
-#include "lwp_priority.h"
-#include "lwp_watchdog.h"
-#include "lwp_wkspace.h"
-#include "lwp_objmgr.h"
-#include "lwp_config.h"
+//#include "lwp_threads.h"
+//#include "lwp_priority.h"
+//#include "lwp_watchdog.h"
+//#include "lwp_wkspace.h"
+//#include "lwp_objmgr.h"
+//#include "lwp_config.h"
 #include "libversion.h"
 
 #define SYSMEM1_SIZE				0x01800000
@@ -98,17 +97,6 @@ struct _sramcntrl {
 	s32 sync;
 } sramcntrl ATTRIBUTE_ALIGN(32);
 
-typedef struct _alarm_st
-{
-	lwp_obj object;
-	wd_cntrl alarm;
-	u64 ticks;
-	u64 periodic;
-	u64 start_per;
-	alarmcallback alarmhandler;
-	void *cb_arg;
-} alarm_st;
-
 typedef struct _yay0header {
 	unsigned int id ATTRIBUTE_PACKED;
 	unsigned int dec_size ATTRIBUTE_PACKED;
@@ -116,15 +104,9 @@ typedef struct _yay0header {
 	unsigned int chunks_offset ATTRIBUTE_PACKED;
 } yay0header;
 
-static u16 sys_fontenc = 0xffff;
-static u32 sys_fontcharsinsheet = 0;
-static u8 *sys_fontwidthtab = NULL;
-static u8 *sys_fontimage = NULL;
-static sys_fontheader *sys_fontdata = NULL;
-
-static lwp_queue sys_reset_func_queue;
+//static lwp_queue sys_reset_func_queue;
 static u32 system_initialized = 0;
-static lwp_objinfo sys_alarm_objects;
+//static lwp_objinfo sys_alarm_objects;
 
 static void *__sysarena1lo = NULL;
 static void *__sysarena1hi = NULL;
@@ -137,10 +119,10 @@ static void *__ipcbufferhi = NULL;
 #endif
 
 static void __RSWDefaultHandler(u32 irq, void* ctx);
-static resetcallback __RSWCallback = NULL;
+//static resetcallback __RSWCallback = NULL;
 #if defined(HW_RVL)
-static void __POWDefaultHandler(void);
-static powercallback __POWCallback = NULL;
+//static void __POWDefaultHandler(void);
+//static powercallback __POWCallback = NULL;
 
 static u32 __sys_resetdown = 0;
 #endif
@@ -231,26 +213,14 @@ static const u32 _dsp_initcode[] =
 	0x02FF02FF,0x00000000,0x00000000,0x00000000
 };
 
-static sys_resetinfo mem_resetinfo = {
-	{},
-	__mem_onreset,
-	127
-};
+//static sys_resetinfo mem_resetinfo = {
+//	{},
+//	__mem_onreset,
+//	127
+//};
 
 static const char *__sys_versiondate;
 static const char *__sys_versionbuild;
-
-static __inline__ alarm_st* __lwp_syswd_open(syswd_t wd)
-{
-	LWP_CHECK_SYSWD(wd);
-	return (alarm_st*)__lwp_objmgr_get(&sys_alarm_objects,LWP_OBJMASKID(wd));
-}
-
-static __inline__ void __lwp_syswd_free(alarm_st *alarm)
-{
-	__lwp_objmgr_close(&sys_alarm_objects,&alarm->object);
-	__lwp_objmgr_free(&sys_alarm_objects,&alarm->object);
-}
 
 #ifdef HW_DOL
 #define SOFTRESET_ADR *((vu32*)0xCC003024)
@@ -306,20 +276,6 @@ static void __init_syscall_array(void) {
 
 }
 
-static alarm_st* __lwp_syswd_allocate(void)
-{
-	alarm_st *alarm;
-
-	__lwp_thread_dispatchdisable();
-	alarm = (alarm_st*)__lwp_objmgr_allocate(&sys_alarm_objects);
-	if(alarm) {
-		__lwp_objmgr_open(&sys_alarm_objects,&alarm->object);
-		return alarm;
-	}
-	__lwp_thread_dispatchenable();
-	return NULL;
-}
-
 static s32 __mem_onreset(s32 final)
 {
 	if(final==TRUE) {
@@ -327,22 +283,6 @@ static s32 __mem_onreset(s32 final)
 		__UnmaskIrq(IM_MEM0|IM_MEM1|IM_MEM2|IM_MEM3);
 	}
 	return 1;
-}
-
-static void __sys_alarmhandler(void *arg)
-{
-	alarm_st *alarm;
-	syswd_t thealarm = (syswd_t)arg;
-
-	if(thealarm==SYS_WD_NULL || LWP_OBJTYPE(thealarm)!=LWP_OBJTYPE_SYSWD) return;
-
-	__lwp_thread_dispatchdisable();
-	alarm = (alarm_st*)__lwp_objmgr_getnoprotection(&sys_alarm_objects,LWP_OBJMASKID(thealarm));
-	if(alarm) {
-		if(alarm->alarmhandler) alarm->alarmhandler(thealarm,alarm->cb_arg);
-		if(alarm->periodic) __lwp_wd_insert_ticks(&alarm->alarm,alarm->periodic);
-	}
-	__lwp_thread_dispatchunnest();
 }
 
 #if defined(HW_DOL)
@@ -356,24 +296,6 @@ static void __dohotreset(u32 resetcode)
 	__reset(resetcode<<3);
 }
 #endif
-
-static s32 __call_resetfuncs(s32 final)
-{
-	s32 ret;
-	sys_resetinfo *info;
-	lwp_queue *header = &sys_reset_func_queue;
-
-	ret = 1;
-	info = (sys_resetinfo*)header->first;
-	while(info!=(sys_resetinfo*)__lwp_queue_tail(header)) {
-		if(info->func && info->func(final)==0) ret |= (ret<<1);
-		info = (sys_resetinfo*)info->node.next;
-	}
-	if(__sram_sync()==0) ret |= (ret<<1);
-
-	if(ret&~0x01) return 0;
-	return 1;
-}
 
 #if defined(HW_DOL)
 static void __doreboot(u32 resetcode,s32 force_menu)
@@ -419,9 +341,9 @@ static void __RSWHandler(u32 irq, void* ctx)
 	if(_piReg[0]&0x10000) {
 		__MaskIrq(IRQMASK(IRQ_PI_RSW));
 
-		if(__RSWCallback) {
-			__RSWCallback(irq, ctx);
-		}
+//		if(__RSWCallback) {
+//			__RSWCallback(irq, ctx);
+//		}
 	}
 	_piReg[0] = 2;
 }
@@ -438,16 +360,16 @@ static void __STMEventHandler(u32 event)
 		if(ret) {
 			_CPU_ISR_Disable(level);
 			__sys_resetdown = 1;
-			if(__RSWCallback) {
-				__RSWCallback(IRQ_PI_RSW, NULL);
-			}
+//			if(__RSWCallback) {
+//				__RSWCallback(IRQ_PI_RSW, NULL);
+//			}
 			_CPU_ISR_Restore(level);
 		}
 	}
 
 	if(event==STM_EVENT_POWER) {
 		_CPU_ISR_Disable(level);
-		__POWCallback();
+		//__POWCallback();
 		_CPU_ISR_Restore(level);
 	}
 }
@@ -486,8 +408,8 @@ static void __lowmem_init(void)
 
 	*((u32*)(ram_start+0xEC))	= (u32)ram_end;	// ram_end (??)
 	*((u32*)(ram_start+0xF0))	= SYSMEM1_SIZE;	// simulated memory size
-	*((u32*)(ram_start+0xF8))	= TB_BUS_CLOCK;	// bus speed: 162 MHz
-	*((u32*)(ram_start+0xFC))	= TB_CORE_CLOCK;	// cpu speed: 486 Mhz
+//	*((u32*)(ram_start+0xF8))	= TB_BUS_CLOCK;	// bus speed: 162 MHz
+//	*((u32*)(ram_start+0xFC))	= TB_CORE_CLOCK;	// cpu speed: 486 Mhz
 
 	*((u16*)(arena_start+0xE0))	= 6; // production pads
 	*((u32*)(arena_start+0xE4))	= 0xC0008000;
@@ -532,18 +454,10 @@ static void __memprotect_init(void)
 	IRQ_Request(IRQ_MEM3,__MEMInterruptHandler,NULL);
 	IRQ_Request(IRQ_MEMADDRESS,__MEMInterruptHandler,NULL);
 
-	SYS_RegisterResetFunc(&mem_resetinfo);
+//	SYS_RegisterResetFunc(&mem_resetinfo);
 	__UnmaskIrq(IM_MEMADDRESS);		//only enable memaddress irq atm
 
 	_CPU_ISR_Restore(level);
-}
-
-static __inline__ u32 __get_fontsize(void *buffer)
-{
-	u8 *ptr = (u8*)buffer;
-
-	if(ptr[0]=='Y' && ptr[1]=='a' && ptr[2]=='y') return (((u32*)ptr)[1]);
-	else return 0;
 }
 
 static u32 __read_rom(void *buf,u32 len,u32 offset)
@@ -717,47 +631,6 @@ static u32 __unlocksram(u32 write,u32 loc)
 	sramcntrl.locked = 0;
 	_CPU_ISR_Restore(sramcntrl.enabled);
 	return sramcntrl.sync;
-}
-
-//returns the size of font
-static u32 __read_font(void *buffer)
-{
-	if(SYS_GetFontEncoding()==1) __SYS_ReadROM(buffer,315392,1769216);
-	else __SYS_ReadROM(buffer,12288,2084608);
-	return __get_fontsize(buffer);
-}
-
-static void __expand_font(const u8 *src,u8 *dest)
-{
-	s32 cnt;
-	u32 idx;
-	u8 val1,val2;
-	u8 *data = (u8*)sys_fontdata+44;
-
-	if(sys_fontdata->sheet_format==0x0000) {
-		cnt = (sys_fontdata->sheet_fullsize/2)-1;
-
-		while(cnt>=0) {
-			idx = _SHIFTR(src[cnt],6,2);
-			val1 = data[idx];
-
-			idx = _SHIFTR(src[cnt],4,2);
-			val2 = data[idx];
-
-			dest[(cnt<<1)+0] =((val1&0xf0)|(val2&0x0f));
-
-			idx = _SHIFTR(src[cnt],2,2);
-			val1 = data[idx];
-
-			idx = _SHIFTR(src[cnt],0,2);
-			val2 = data[idx];
-
-			dest[(cnt<<1)+1] =((val1&0xf0)|(val2&0x0f));
-
-			cnt--;
-		}
-	}
-	DCStoreRange(dest,sys_fontdata->sheet_fullsize);
 }
 
 static void __dsp_bootstrap(void)
@@ -946,20 +819,6 @@ void __SYS_SetBootTime(void)
 	settime(SYS_Time());
 }
 
-u32 __SYS_LoadFont(void *src,void *dest)
-{
-	if(__read_font(src)==0) return 0;
-
-	decode_szp(src,dest);
-
-	sys_fontdata = (sys_fontheader*)dest;
-	sys_fontwidthtab = (u8*)dest+sys_fontdata->width_table;
-	sys_fontcharsinsheet = sys_fontdata->sheet_column*sys_fontdata->sheet_row;
-
-	/* TODO: implement SJIS handling */
-	return 1;
-}
-
 #if defined(HW_RVL)
 void* __SYS_GetIPCBufferLo(void)
 {
@@ -975,29 +834,6 @@ void* __SYS_GetIPCBufferHi(void)
 
 void _V_EXPORTNAME(void)
 { __sys_versionbuild = _V_STRING; __sys_versiondate = _V_DATE_; }
-
-#if defined(HW_RVL)
-void __SYS_DoPowerCB(void)
-{
-	u32 level;
-	powercallback powcb;
-
-	_CPU_ISR_Disable(level);
-	powcb = __POWCallback;
-	__POWCallback = __POWDefaultHandler;
-	powcb();
-	_CPU_ISR_Restore(level);
-}
-#endif
-
-void __SYS_InitCallbacks(void)
-{
-#if defined(HW_RVL)
-	__POWCallback = __POWDefaultHandler;
-	__sys_resetdown = 0;
-#endif
-	__RSWCallback = __RSWDefaultHandler;
-}
 
 void __attribute__((weak)) __SYS_PreInit(void)
 {
@@ -1022,12 +858,7 @@ void SYS_Init(void)
 #if defined(HW_RVL)
 	__ipcbuffer_init();
 #endif
-	__lwp_wkspace_init(KERNEL_HEAP);
-	__lwp_queue_init_empty(&sys_reset_func_queue);
-	__lwp_objmgr_initinfo(&sys_alarm_objects,LWP_MAX_WATCHDOGS,sizeof(alarm_st));
 	__sys_state_init();
-	__lwp_priority_init();
-	__lwp_watchdog_init();
 	__exception_init();
 	__systemcall_init();
 	__decrementer_init();
@@ -1035,13 +866,7 @@ void SYS_Init(void)
 	__exi_init();
 	__sram_init();
 	__si_init();
-	__lwp_thread_coreinit();
-	__lwp_sysinit();
 	__memlock_init();
-	__lwp_mqbox_init();
-	__lwp_sema_init();
-	__lwp_mutex_init();
-	__lwp_cond_init();
 	__timesystem_init();
 	__dsp_bootstrap();
 
@@ -1057,7 +882,6 @@ void SYS_Init(void)
 	__MaskIrq(IRQMASK(IRQ_PI_RSW));
 #endif
 	__libc_init(1);
-	__lwp_thread_startmultitasking();
 	_CPU_ISR_Restore(level);
 }
 
@@ -1077,11 +901,6 @@ void SYS_PreMain(void)
 	__SYS_SetBootTime();
 	WII_Initialize();
 #endif
-}
-
-u32 SYS_ResetButtonDown(void)
-{
-	return (!(_piReg[0]&0x00010000));
 }
 
 #if defined(HW_DOL)
@@ -1195,32 +1014,6 @@ void SYS_ResetSystem(s32 reset,u32 reset_code,s32 force_menu)
 	__PADDisableRecalibration(ret);
 }
 #endif
-
-void SYS_RegisterResetFunc(sys_resetinfo *info)
-{
-	u32 level;
-	sys_resetinfo *after;
-	lwp_queue *header = &sys_reset_func_queue;
-
-	_CPU_ISR_Disable(level);
-	for(after=(sys_resetinfo*)header->first;after->node.next!=NULL && info->prio>=after->prio;after=(sys_resetinfo*)after->node.next);
-	__lwp_queue_insertI(after->node.prev,&info->node);
-	_CPU_ISR_Restore(level);
-}
-
-void SYS_UnregisterResetFunc(sys_resetinfo *info) {
-	u32 level;
-	lwp_node *n;
-
-	_CPU_ISR_Disable(level);
-	for (n = sys_reset_func_queue.first; n->next; n = n->next) {
-		if (n == &info->node) {
-			__lwp_queue_extractI(n);
-			break;
-		}
-	}
-	_CPU_ISR_Restore(level);
-}
 
 void SYS_SetArena1Lo(void *newLo)
 {
@@ -1384,234 +1177,6 @@ void SYS_ProtectRange(u32 chan,void *addr,u32 bytes,u32 cntrl)
 	}
 }
 
-void* SYS_AllocateFramebuffer(GXRModeObj *rmode)
-{
-	return memalign(32, VIDEO_GetFrameBufferSize(rmode));
-}
-
-u32 SYS_GetFontEncoding(void)
-{
-	u32 ret,tv_mode;
-
-	if(sys_fontenc<=0x0001) return sys_fontenc;
-
-	ret = 0;
-	tv_mode = VIDEO_GetCurrentTvMode();
-	if(tv_mode==VI_NTSC && _viReg[55]&0x0002) ret = 1;
-	sys_fontenc = ret;
-	return ret;
-}
-
-u32 SYS_InitFont(sys_fontheader *font_data)
-{
-	void *packed_data = NULL;
-
-	if(!font_data) return 0;
-
-	if(SYS_GetFontEncoding()==1) {
-		memset(font_data,0,SYS_FONTSIZE_SJIS);
-		packed_data = (void*)((u32)font_data+868096);
-	} else {
-		memset(font_data,0,SYS_FONTSIZE_ANSI);
-		packed_data = (void*)((u32)font_data+119072);
-	}
-
-	if(__SYS_LoadFont(packed_data,font_data)==1) {
-		sys_fontimage = (u8*)((((u32)font_data+font_data->sheet_image)+31)&~31);
-		__expand_font((u8*)font_data+font_data->sheet_image,sys_fontimage);
-		return 1;
-	}
-
-	return 0;
-}
-
-void SYS_GetFontTexture(s32 c,void **image,s32 *xpos,s32 *ypos,s32 *width)
-{
-	u32 sheets,rem;
-
-	*xpos = 0;
-	*ypos = 0;
-	*image = NULL;
-	if(!sys_fontwidthtab || ! sys_fontimage) return;
-
-	if(c<sys_fontdata->first_char || c>sys_fontdata->last_char) c = sys_fontdata->inval_char;
-	else c -= sys_fontdata->first_char;
-
-	sheets = c/sys_fontcharsinsheet;
-	rem = c%sys_fontcharsinsheet;
-	*image = sys_fontimage+(sys_fontdata->sheet_size*sheets);
-	*xpos = (rem%sys_fontdata->sheet_column)*sys_fontdata->cell_width;
-	*ypos = (rem/sys_fontdata->sheet_column)*sys_fontdata->cell_height;
-	*width = sys_fontwidthtab[c];
-}
-
-void SYS_GetFontTexel(s32 c,void *image,s32 pos,s32 stride,s32 *width)
-{
-	u32 sheets,rem;
-	u32 xoff,yoff;
-	u32 xpos,ypos;
-	u8 *img_start;
-	u8 *ptr1,*ptr2;
-
-	if(!sys_fontwidthtab || ! sys_fontimage) return;
-
-	if(c<sys_fontdata->first_char || c>sys_fontdata->last_char) c = sys_fontdata->inval_char;
-	else c -= sys_fontdata->first_char;
-
-	sheets = c/sys_fontcharsinsheet;
-	rem = c%sys_fontcharsinsheet;
-	xoff = (rem%sys_fontdata->sheet_column)*sys_fontdata->cell_width;
-	yoff = (rem/sys_fontdata->sheet_column)*sys_fontdata->cell_height;
-	img_start = sys_fontimage+(sys_fontdata->sheet_size*sheets);
-
-	ypos = 0;
-	while(ypos<sys_fontdata->cell_height) {
-		xpos = 0;
-		while(xpos<sys_fontdata->cell_width) {
-			ptr1 = img_start+(((sys_fontdata->sheet_width/8)<<5)*((ypos+yoff)/8));
-			ptr1 = ptr1+(((xpos+xoff)/8)<<5);
-			ptr1 = ptr1+(((ypos+yoff)%8)<<2);
-			ptr1 = ptr1+(((xpos+xoff)%8)/2);
-
-			ptr2 = image+((ypos/8)*(((stride<<1)/8)<<5));
-			ptr2 = ptr2+(((xpos+pos)/8)<<5);
-			ptr2 = ptr2+(((xpos+pos)%8)/2);
-			ptr2 = ptr2+((ypos%8)<<2);
-
-			*ptr2 = *ptr1;
-
-			xpos += 2;
-		}
-		ypos++;
-	}
-	*width = sys_fontwidthtab[c];
-}
-
-s32 SYS_CreateAlarm(syswd_t *thealarm)
-{
-	alarm_st *alarm;
-
-	alarm = __lwp_syswd_allocate();
-	if(!alarm) return -1;
-
-	alarm->alarmhandler = NULL;
-	alarm->ticks = 0;
-	alarm->start_per = 0;
-	alarm->periodic = 0;
-
-	*thealarm = (LWP_OBJMASKTYPE(LWP_OBJTYPE_SYSWD)|LWP_OBJMASKID(alarm->object.id));
-	__lwp_thread_dispatchenable();
-	return 0;
-}
-
-s32 SYS_SetAlarm(syswd_t thealarm,const struct timespec *tp,alarmcallback cb,void *cbarg)
-{
-	alarm_st *alarm;
-
-	alarm = __lwp_syswd_open(thealarm);
-	if(!alarm) return -1;
-
-	alarm->cb_arg = cbarg;
-	alarm->alarmhandler = cb;
-	alarm->ticks = __lwp_wd_calc_ticks(tp);
-
-	alarm->periodic = 0;
-	alarm->start_per = 0;
-
-	__lwp_wd_initialize(&alarm->alarm,__sys_alarmhandler,alarm->object.id,(void*)thealarm);
-	__lwp_wd_insert_ticks(&alarm->alarm,alarm->ticks);
-	__lwp_thread_dispatchenable();
-	return 0;
-}
-
-s32 SYS_SetPeriodicAlarm(syswd_t thealarm,const struct timespec *tp_start,const struct timespec *tp_period,alarmcallback cb,void *cbarg)
-{
-	alarm_st *alarm;
-
-	alarm = __lwp_syswd_open(thealarm);
-	if(!alarm) return -1;
-
-	alarm->start_per = __lwp_wd_calc_ticks(tp_start);
-	alarm->periodic = __lwp_wd_calc_ticks(tp_period);
-	alarm->alarmhandler = cb;
-	alarm->cb_arg = cbarg;
-
-	alarm->ticks = 0;
-
-	__lwp_wd_initialize(&alarm->alarm,__sys_alarmhandler,alarm->object.id,(void*)thealarm);
-	__lwp_wd_insert_ticks(&alarm->alarm,alarm->start_per);
-	__lwp_thread_dispatchenable();
-	return 0;
-}
-
-s32 SYS_RemoveAlarm(syswd_t thealarm)
-{
-	alarm_st *alarm;
-
-	alarm = __lwp_syswd_open(thealarm);
-	if(!alarm) return -1;
-
-	alarm->alarmhandler = NULL;
-	alarm->ticks = 0;
-	alarm->periodic = 0;
-	alarm->start_per = 0;
-
-	__lwp_wd_remove_ticks(&alarm->alarm);
-	__lwp_syswd_free(alarm);
-	__lwp_thread_dispatchenable();
-	return 0;
-}
-
-s32 SYS_CancelAlarm(syswd_t thealarm)
-{
-	alarm_st *alarm;
-
-	alarm = __lwp_syswd_open(thealarm);
-	if(!alarm) return -1;
-
-	alarm->alarmhandler = NULL;
-	alarm->ticks = 0;
-	alarm->periodic = 0;
-	alarm->start_per = 0;
-
-	__lwp_wd_remove_ticks(&alarm->alarm);
-	__lwp_thread_dispatchenable();
-	return 0;
-}
-
-resetcallback SYS_SetResetCallback(resetcallback cb)
-{
-	u32 level;
-	resetcallback old;
-
-	_CPU_ISR_Disable(level);
-	old = __RSWCallback;
-	__RSWCallback = cb;
-#if defined(HW_DOL)
-	if(__RSWCallback) {
-		_piReg[0] = 2;
-		__UnmaskIrq(IRQMASK(IRQ_PI_RSW));
-	} else
-		__MaskIrq(IRQMASK(IRQ_PI_RSW));
-#endif
-	_CPU_ISR_Restore(level);
-	return old;
-}
-
-#if defined(HW_RVL)
-powercallback SYS_SetPowerCallback(powercallback cb)
-{
-	u32 level;
-	powercallback old;
-
-	_CPU_ISR_Disable(level);
-	old = __POWCallback;
-	__POWCallback = cb;
-	_CPU_ISR_Restore(level);
-	return old;
-}
-#endif
-
 void SYS_StartPMC(u32 mcr0val,u32 mcr1val)
 {
 	mtmmcr0(mcr0val);
@@ -1672,21 +1237,3 @@ u32 SYS_GetHollywoodRevision(void)
 	return rev;
 }
 #endif
-
-u64 SYS_Time(void)
-{
-	u64 current_time = 0;
-    u32 gmtime =0;
-    __SYS_GetRTC(&gmtime);
-    current_time = gmtime;
-#ifdef HW_RVL
-	u32 bias;
-	if (CONF_GetCounterBias(&bias) >= 0)
-		current_time += bias;
-#else
-	syssram* sram = __SYS_LockSram();
-	current_time += sram->counter_bias;
-	__SYS_UnlockSram(0);
-#endif
-	return (TB_TIMER_CLOCK * 1000) * current_time;
-}

@@ -27,20 +27,7 @@ VERSTRING	:=	$(LIBOGC_MAJOR).$(LIBOGC_MINOR).$(LIBOGC_PATCH)
 ifeq ($(strip $(PLATFORM)),)
 #---------------------------------------------------------------------------------
 export BASEDIR		:= $(CURDIR)
-export LWIPDIR		:= $(BASEDIR)/lwip
 export OGCDIR		:= $(BASEDIR)/libogc
-export MODDIR		:= $(BASEDIR)/libmodplay
-export MADDIR		:= $(BASEDIR)/libmad
-export SAMPLEDIR	:= $(BASEDIR)/libsamplerate
-export DBDIR		:= $(BASEDIR)/libdb
-export DIDIR		:= $(BASEDIR)/libdi
-export BTEDIR		:= $(BASEDIR)/lwbt
-export WIIUSEDIR	:= $(BASEDIR)/wiiuse
-export TINYSMBDIR	:= $(BASEDIR)/libtinysmb
-export LIBASNDDIR	:= $(BASEDIR)/libasnd
-export LIBAESNDDIR	:= $(BASEDIR)/libaesnd
-export LIBISODIR	:= $(BASEDIR)/libiso9660
-export LIBWIIKEYB	:= $(BASEDIR)/libwiikeyboard
 export STUBSDIR		:= $(BASEDIR)/lockstubs
 export DEPS			:=	$(BASEDIR)/deps
 export LIBS			:=	$(BASEDIR)/lib
@@ -60,29 +47,12 @@ endif
 
 
 #---------------------------------------------------------------------------------
-BBALIB		:= $(LIBDIR)/libbba
 OGCLIB		:= $(LIBDIR)/libogc
-MODLIB		:= $(LIBDIR)/libmodplay
-MADLIB		:= $(LIBDIR)/libmad
-DBLIB		:= $(LIBDIR)/libdb
-DILIB		:= $(LIBDIR)/libdi
-BTELIB		:= $(LIBDIR)/libbte
-WIIUSELIB	:= $(LIBDIR)/libwiiuse
-TINYSMBLIB	:= $(LIBDIR)/libtinysmb
-ASNDLIB		:= $(LIBDIR)/libasnd
-AESNDLIB	:= $(LIBDIR)/libaesnd
-ISOLIB		:= $(LIBDIR)/libiso9660
-WIIKEYBLIB	:= $(LIBDIR)/libwiikeyboard
 STUBSLIB	:= $(LIBDIR)/libgclibstubs
 
 #---------------------------------------------------------------------------------
 DEFINCS		:= -I$(BASEDIR) -I$(BASEDIR)/gc
-INCLUDES	:=	$(DEFINCS) -I$(BASEDIR)/gc/netif -I$(BASEDIR)/gc/ipv4 \
-				-I$(BASEDIR)/gc/ogc -I$(BASEDIR)/gc/ogc/machine \
-				-I$(BASEDIR)/gc/modplay \
-				-I$(BASEDIR)/gc/bte \
-				-I$(BASEDIR)/gc/sdcard -I$(BASEDIR)/gc/wiiuse \
-				-I$(BASEDIR)/gc/di
+INCLUDES	:=	$(DEFINCS) -I$(BASEDIR)/gc/ogc -I$(BASEDIR)/gc/ogc/machine
 
 MACHDEP		:= -DBIGENDIAN -DGEKKO -mcpu=750 -meabi -msdata=eabi -mhard-float -ffunction-sections -fdata-sections
 
@@ -95,96 +65,24 @@ ifeq ($(PLATFORM),cube)
 MACHDEP		+=	-DHW_DOL
 endif
 
-CFLAGS		:= -DLIBOGC_INTERNAL -g -O2 -fno-strict-aliasing -Wall $(MACHDEP) $(INCLUDES)
+CFLAGS		:= -DLIBOGC_INTERNAL -g -O2 -fno-strict-aliasing $(MACHDEP) $(INCLUDES)
 ASFLAGS		:=	$(MACHDEP) -mregnames -D_LANGUAGE_ASSEMBLY $(INCLUDES)
 
 #---------------------------------------------------------------------------------
-VPATH :=	$(LWIPDIR)				\
-			$(LWIPDIR)/arch/gc		\
-			$(LWIPDIR)/arch/gc/netif	\
-			$(LWIPDIR)/core			\
-			$(LWIPDIR)/core/ipv4	\
-			$(LWIPDIR)/netif	\
-			$(OGCDIR)			\
-			$(MODDIR)			\
-			$(MADDIR)			\
-			$(SAMPLEDIR)			\
-			$(DBDIR)			\
-			$(DBDIR)/uIP		\
-			$(DIDIR)		\
-			$(BTEDIR)		\
-			$(WIIUSEDIR)		\
-			$(SDCARDDIR)			\
-			$(TINYSMBDIR)		\
-			$(LIBASNDDIR)		\
-			$(LIBAESNDDIR)		\
-			$(LIBISODIR)		\
-			$(LIBWIIKEYB)		\
+VPATH :=	$(OGCDIR)			\
 			$(STUBSDIR)
-
-
-#---------------------------------------------------------------------------------
-LWIPOBJ		:=	network.o netio.o gcif.o	\
-			inet.o mem.o dhcp.o raw.o		\
-			memp.o netif.o pbuf.o stats.o	\
-			sys.o tcp.o tcp_in.o tcp_out.o	\
-			udp.o icmp.o ip.o ip_frag.o		\
-			ip_addr.o etharp.o loopif.o
 
 #---------------------------------------------------------------------------------
 OGCOBJ		:=	\
-			console.o  lwp_priority.o lwp_queue.o lwp_threadq.o lwp_threads.o lwp_sema.o	\
-			lwp_messages.o lwp.o lwp_handler.o lwp_stack.o lwp_mutex.o 	\
-			lwp_watchdog.o lwp_wkspace.o lwp_objmgr.o lwp_heap.o sys_state.o \
-			exception_handler.o exception.o irq.o irq_handler.o semaphore.o \
-			video_asm.o video.o pad.o dvd.o exi.o mutex.o arqueue.o	arqmgr.o	\
-			cache_asm.o system.o system_asm.o cond.o			\
-			gx.o gu.o gu_psasm.o audio.o cache.o decrementer.o			\
-			message.o card.o aram.o depackrnc.o decrementer_handler.o	\
-			depackrnc1.o dsp.o si.o tpl.o ipc.o ogc_crt0.o \
-			console_font_8x16.o timesupp.o lock_supp.o newlibc.o usbgecko.o usbmouse.o \
-			sbrk.o malloc_lock.o kprintf.o stm.o ios.o es.o isfs.o usb.o network_common.o \
-			sdgecko_io.o sdgecko_buf.o gcsd.o argv.o network_wii.o wiisd.o conf.o usbstorage.o \
-			texconv.o wiilaunch.o
-
-#---------------------------------------------------------------------------------
-MODOBJ		:=	freqtab.o mixer.o modplay.o semitonetab.o gcmodplay.o
-
-#---------------------------------------------------------------------------------
-MADOBJ		:=	mp3player.o bit.o decoder.o fixed.o frame.o huffman.o \
-			layer12.o layer3.o stream.o synth.o timer.o \
-			version.o
-
-#---------------------------------------------------------------------------------
-DBOBJ		:=	uip_ip.o uip_tcp.o uip_pbuf.o uip_netif.o uip_arp.o uip_arch.o \
-				uip_icmp.o memb.o memr.o bba.o tcpip.o debug.o debug_handler.o \
-				debug_supp.o geckousb.o
-#---------------------------------------------------------------------------------
-DIOBJ		:=	di.o
-
-#---------------------------------------------------------------------------------
-BTEOBJ		:=	bte.o hci.o l2cap.o btmemb.o btmemr.o btpbuf.o physbusif.o
-
-#---------------------------------------------------------------------------------
-WIIUSEOBJ	:=	classic.o dynamics.o events.o guitar_hero_3.o io.o io_wii.o ir.o \
-				nunchuk.o wiiboard.o wiiuse.o speaker.o wpad.o motion_plus.o
-
-#---------------------------------------------------------------------------------
-TINYSMBOBJ	:=	des.o md4.o ntlm.o smb.o smb_devoptab.o
-
-#---------------------------------------------------------------------------------
-ASNDLIBOBJ	:=	asndlib.o
-
-#---------------------------------------------------------------------------------
-AESNDLIBOBJ	:=	aesndlib.o
-
-#---------------------------------------------------------------------------------
-ISOLIBOBJ	:=	iso9660.o
-
-#---------------------------------------------------------------------------------
-WIIKEYBLIBOBJ	:=	usbkeyboard.o keyboard.o ukbdmap.o wskbdutil.o
-
-
+			console.o sys_state.o \
+			exception_handler.o exception.o irq.o irq_handler.o \
+			exi.o	\
+			cache_asm.o system.o system_asm.o			\
+			cache.o			\
+			decrementer_handler.o	\
+			ipc.o ogc_crt0.o \
+			console_font_8x16.o timesupp.o \
+			sbrk.o kprintf.o stm.o ios.o es.o isfs.o argv.o
 
 all: wii cube
 
@@ -225,33 +123,8 @@ gc/ogc/libversion.h : Makefile
 	@echo "#endif // __LIBVERSION_H__" >> $@
 
 #---------------------------------------------------------------------------------
-$(BBALIB).a: $(LWIPOBJ)
-#---------------------------------------------------------------------------------
 $(OGCLIB).a: $(OGCOBJ)
-#---------------------------------------------------------------------------------
-$(MP3LIB).a: $(MP3OBJ)
-#---------------------------------------------------------------------------------
-$(MODLIB).a: $(MODOBJ)
-#---------------------------------------------------------------------------------
-$(MADLIB).a: $(MADOBJ)
-#---------------------------------------------------------------------------------
-$(DBLIB).a: $(DBOBJ)
-#---------------------------------------------------------------------------------
-$(DILIB).a: $(DIOBJ)
-#---------------------------------------------------------------------------------
-$(TINYSMBLIB).a: $(TINYSMBOBJ)
-#---------------------------------------------------------------------------------
-$(ASNDLIB).a: $(ASNDLIBOBJ)
-#---------------------------------------------------------------------------------
-$(AESNDLIB).a: $(AESNDLIBOBJ)
-#---------------------------------------------------------------------------------
-$(ISOLIB).a: $(ISOLIBOBJ)
-#---------------------------------------------------------------------------------
-$(WIIKEYBLIB).a: $(WIIKEYBLIBOBJ)
-#---------------------------------------------------------------------------------
 $(BTELIB).a: $(BTEOBJ)
-#---------------------------------------------------------------------------------
-$(WIIUSELIB).a: $(WIIUSEOBJ)
 #---------------------------------------------------------------------------------
 
 .PHONY: libs wii cube install-headers install dist docs

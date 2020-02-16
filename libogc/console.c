@@ -7,12 +7,10 @@
 #include "processor.h"
 #include "color.h"
 #include "cache.h"
-#include "video.h"
 #include "system.h"
 
 #include "console.h"
 #include "consol.h"
-#include "usbgecko.h"
 
 #include <stdio.h>
 #include <sys/iosupport.h>
@@ -84,17 +82,17 @@ void __console_vipostcb(u32 retraceCnt)
 	do_xfb_copy = TRUE;
 
 	ptr = curr_con->destbuffer;
-	fb = VIDEO_GetCurrentFramebuffer()+(curr_con->target_y*curr_con->tgt_stride) + curr_con->target_x*VI_DISPLAY_PIX_SZ;
-	fb_stride = curr_con->tgt_stride/4 - (curr_con->con_xres/VI_DISPLAY_PIX_SZ);
+	//fb = VIDEO_GetCurrentFramebuffer()+(curr_con->target_y*curr_con->tgt_stride) + curr_con->target_x*VI_DISPLAY_PIX_SZ;
+	//fb_stride = curr_con->tgt_stride/4 - (curr_con->con_xres/VI_DISPLAY_PIX_SZ);
 
-	for(ycnt=curr_con->con_yres;ycnt>0;ycnt--)
-	{
-		for(xcnt=curr_con->con_xres;xcnt>0;xcnt-=VI_DISPLAY_PIX_SZ)
-		{
-			*fb++ = *ptr++;
-		}
-		fb += fb_stride;
-	}
+//	for(ycnt=curr_con->con_yres;ycnt>0;ycnt--)
+//	{
+//		for(xcnt=curr_con->con_xres;xcnt>0;xcnt-=VI_DISPLAY_PIX_SZ)
+//		{
+//			*fb++ = *ptr++;
+//		}
+//		fb += fb_stride;
+//	}
 
 	do_xfb_copy = FALSE;
 }
@@ -594,19 +592,19 @@ void CON_Init(void *framebuffer,int xstart,int ystart,int xres,int yres,int stri
 	__console_init(framebuffer,xstart,ystart,xres,yres,stride);
 }
 
-s32 CON_InitEx(GXRModeObj *rmode, s32 conXOrigin,s32 conYOrigin,s32 conWidth,s32 conHeight)
-{
-	VIDEO_SetPostRetraceCallback(NULL);
-	if(_console_buffer)
-		free(_console_buffer);
-	
-	_console_buffer = malloc(conWidth*conHeight*VI_DISPLAY_PIX_SZ);
-	if(!_console_buffer) return -1;
-
-	__console_init_ex(_console_buffer,conXOrigin,conYOrigin,rmode->fbWidth*VI_DISPLAY_PIX_SZ,conWidth,conHeight,conWidth*VI_DISPLAY_PIX_SZ);
-
-	return 0;
-}
+//s32 CON_InitEx(GXRModeObj *rmode, s32 conXOrigin,s32 conYOrigin,s32 conWidth,s32 conHeight)
+//{
+//	VIDEO_SetPostRetraceCallback(NULL);
+//	if(_console_buffer)
+//		free(_console_buffer);
+//
+//	_console_buffer = malloc(conWidth*conHeight*VI_DISPLAY_PIX_SZ);
+//	if(!_console_buffer) return -1;
+//
+//	__console_init_ex(_console_buffer,conXOrigin,conYOrigin,rmode->fbWidth*VI_DISPLAY_PIX_SZ,conWidth,conHeight,conWidth*VI_DISPLAY_PIX_SZ);
+//
+//	return 0;
+//}
 
 void CON_GetMetrics(int *cols, int *rows)
 {

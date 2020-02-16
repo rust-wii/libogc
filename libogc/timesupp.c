@@ -3,8 +3,8 @@
 
 #include "asm.h"
 #include "processor.h"
-#include "lwp.h"
-#include "lwp_threadq.h"
+//#include "lwp.h"
+//#include "lwp_threadq.h"
 #include "timesupp.h"
 #include "exi.h"
 #include "system.h"
@@ -15,7 +15,7 @@
 
 /* time variables */
 static u32 exi_wait_inited = 0;
-static lwpq_t time_exi_wait;
+//static lwpq_t time_exi_wait;
 
 extern u32 __SYS_GetRTC(u32 *gctime);
 extern syssram* __SYS_LockSram(void);
@@ -108,7 +108,7 @@ void __timesystem_init(void)
 {
 	if(!exi_wait_inited) {
 		exi_wait_inited = 1;
-		LWP_InitQueue(&time_exi_wait);
+//		LWP_InitQueue(&time_exi_wait);
 	}
 }
 
@@ -155,14 +155,14 @@ int __libogc_nanosleep(const struct timespec *tb, struct timespec *rem)
 {
 	u64 timeout;
 
-	__lwp_thread_dispatchdisable();
+	//__lwp_thread_dispatchdisable();
 
-	timeout = __lwp_wd_calc_ticks(tb);
-	__lwp_thread_setstate(_thr_executing,LWP_STATES_DELAYING|LWP_STATES_INTERRUPTIBLE_BY_SIGNAL);
-	__lwp_wd_initialize(&_thr_executing->timer,__lwp_thread_delayended,_thr_executing->object.id,_thr_executing);
-	__lwp_wd_insert_ticks(&_thr_executing->timer,timeout);
+	//timeout = __lwp_wd_calc_ticks(tb);
+	//__lwp_thread_setstate(_thr_executing,LWP_STATES_DELAYING|LWP_STATES_INTERRUPTIBLE_BY_SIGNAL);
+	//__lwp_wd_initialize(&_thr_executing->timer,__lwp_thread_delayended,_thr_executing->object.id,_thr_executing);
+	//__lwp_wd_insert_ticks(&_thr_executing->timer,timeout);
 
-	__lwp_thread_dispatchenable();
+	//__lwp_thread_dispatchenable();
 	return TB_SUCCESSFUL;
 }
 

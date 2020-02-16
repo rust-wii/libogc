@@ -40,15 +40,15 @@ distribution.
 #include <gcutil.h>
 #include "asm.h"
 #include "processor.h"
-#include "lwp.h"
+//#include "lwp.h"
 #include "irq.h"
 #include "ipc.h"
 #include "cache.h"
 #include "system.h"
-#include "lwp_heap.h"
-#include "lwp_wkspace.h"
+//#include "lwp_heap.h"
+//#include "lwp_wkspace.h"
 
-//#define DEBUG_IPC
+#define DEBUG_IPC
 
 #define IPC_HEAP_SIZE			4096
 #define IPC_REQUESTSIZE			64
@@ -107,7 +107,7 @@ struct _ipcreq
 	ipccallback cb;		//32
 	void *usrdata;		//36
 	u32 relnch;			//40
-	lwpq_t syncqueue;	//44
+	//lwpq_t syncqueue;	//44
 	u32 magic;			//48 - used to avoid spurious responses, like from zelda.
 	u8 pad1[12];		//52 - 60
 } ATTRIBUTE_PACKED;
@@ -125,7 +125,7 @@ struct _ipcheap
 {
 	void *membase;
 	u32 size;
-	heap_cntrl heap;
+	//heap_cntrl heap;
 };
 
 struct _ioctlvfmt_bufent
@@ -165,7 +165,7 @@ static struct _ipcreqres _ipc_responses;
 
 static struct _ipcheap _ipc_heaps[IPC_NUMHEAPS] =
 {
-	{NULL, 0, {}} // all other elements should be inited to zero, says C standard, so this should do
+	{NULL, 0} // all other elements should be inited to zero, says C standard, so this should do
 };
 
 static vu32* const _ipcReg = (u32*)0xCD000000;
@@ -241,10 +241,10 @@ static s32 __ioctlvfmtCB(s32 result,void *userdata)
 	user_data = cbdata->user_data;
 
 	// free buffer list
-	__lwp_wkspace_free(cbdata->bufs);
+	//__lwp_wkspace_free(cbdata->bufs);
 
 	// free callback data
-	__lwp_wkspace_free(cbdata);
+	//__lwp_wkspace_free(cbdata);
 
 	// call the user callback
 	if(user_cb)
@@ -384,8 +384,9 @@ static void __ipc_replyhandler(void)
 		if(req->cb!=NULL) {
 			req->cb(req->result,req->usrdata);
 			__ipc_freereq(req);
-		} else
-			LWP_ThreadSignal(req->syncqueue);
+		} else {
+			//LWP_ThreadSignal(req->syncqueue);
+		}
 	} else {
 		// NOTE: we really want to find out if this ever happens
 		// and take steps to prevent it beforehand (because it will
@@ -397,7 +398,7 @@ static void __ipc_replyhandler(void)
 		printf("Received unknown IPC response (magic %08x):\n", req->magic);
 		printf("  CMD %08x RES %08x REQCMD %08x\n", req->cmd, req->result, req->req_cmd);
 		printf("  Args: %08x %08x %08x %08x %08x\n", req->args[0], req->args[1], req->args[2], req->args[3], req->args[4]);
-		printf("  CB %08x DATA %08x REL %08x QUEUE %08x\n", (u32)req->cb, (u32)req->usrdata, req->relnch, (u32)req->syncqueue);
+		//printf("  CB %08x DATA %08x REL %08x QUEUE %08x\n", (u32)req->cb, (u32)req->usrdata, req->relnch, (u32)req->syncqueue);
 #endif
 		_ipc_spuriousresponsecnt++;
 	}
@@ -421,7 +422,7 @@ static void __ipc_ackhandler(void)
 			_ipc_relnchRpc->result = 0;
 			_ipc_relnchFl = 0;
 
-			LWP_ThreadSignal(_ipc_relnchRpc->syncqueue);
+			//LWP_ThreadSignal(_ipc_relnchRpc->syncqueue);
 
 			ipc_ack = ((IPC_ReadReg(1)&0x30)|0x08);
 			IPC_WriteReg(1,ipc_ack);
@@ -461,12 +462,12 @@ static s32 __ios_ioctlvformat_parse(const char *format,va_list args,struct _ioct
 	if(maxbufs>=IOS_MAXFMT_PARAMS) return IPC_EINVAL;
 
 	cbdata->hId = hId;
-	cbdata->bufs = __lwp_wkspace_allocate((sizeof(struct _ioctlvfmt_bufent)*(maxbufs+1)));
+	//cbdata->bufs = __lwp_wkspace_allocate((sizeof(struct _ioctlvfmt_bufent)*(maxbufs+1)));
 	if(cbdata->bufs==NULL) return IPC_ENOMEM;
 
 	argp = iosAlloc(hId,(sizeof(struct _ioctlv)*(maxbufs+1)));
 	if(argp==NULL) {
-		__lwp_wkspace_free(cbdata->bufs);
+		//__lwp_wkspace_free(cbdata->bufs);
 		return IPC_ENOMEM;
 	}
 
@@ -678,7 +679,7 @@ free_and_error:
 	for(i=0;i<cbdata->num_bufs;i++) {
 		if(cbdata->bufs[i].ipc_buf!=NULL) iosFree(hId,cbdata->bufs[i].ipc_buf);
 	}
-	__lwp_wkspace_free(cbdata->bufs);
+	//__lwp_wkspace_free(cbdata->bufs);
 	return ret;
 }
 
@@ -702,18 +703,18 @@ static s32 __ipc_syncrequest(struct _ipcreq *req)
 	s32 ret;
 	u32 level;
 
-	LWP_InitQueue(&req->syncqueue);
+	//LWP_InitQueue(&req->syncqueue);
 
 	_CPU_ISR_Disable(level);
 	ret = __ipc_syncqueuerequest(req);
 	if(ret==0) {
 		if(_ipc_mailboxack>0) __ipc_sendrequest();
-		LWP_ThreadSleep(req->syncqueue);
+		//LWP_ThreadSleep(req->syncqueue);
 		ret = req->result;
 	}
 	_CPU_ISR_Restore(level);
 
-	LWP_CloseQueue(req->syncqueue);
+//	LWP_CloseQueue(req->syncqueue);
 	return ret;
 }
 
@@ -746,7 +747,7 @@ s32 iosCreateHeap(s32 size)
 	_ipc_heaps[i].membase = (void*)ipclo;
 	_ipc_heaps[i].size = size;
 
-	ret = __lwp_heap_init(&_ipc_heaps[i].heap,(void*)ipclo,size,PPC_CACHE_ALIGNMENT);
+	//ret = __lwp_heap_init(&_ipc_heaps[i].heap,(void*)ipclo,size,PPC_CACHE_ALIGNMENT);
 	if(ret<=0) return IPC_ENOMEM;
 
 	IPC_SetBufferLo((void*)(ipclo+size));
@@ -760,7 +761,7 @@ void* iosAlloc(s32 hid,s32 size)
 	printf("iosAlloc(%d,%d)\n",hid,size);
 #endif
 	if(hid<0 || hid>=IPC_NUMHEAPS || size<=0) return NULL;
-	return __lwp_heap_allocate(&_ipc_heaps[hid].heap,size);
+	//return __lwp_heap_allocate(&_ipc_heaps[hid].heap,size);
 }
 
 void iosFree(s32 hid,void *ptr)
@@ -769,7 +770,7 @@ void iosFree(s32 hid,void *ptr)
 	printf("iosFree(%d,0x%p)\n",hid,ptr);
 #endif
 	if(hid<0 || hid>=IPC_NUMHEAPS || ptr==NULL) return;
-	__lwp_heap_free(&_ipc_heaps[hid].heap,ptr);
+	//__lwp_heap_free(&_ipc_heaps[hid].heap,ptr);
 }
 
 void* IPC_GetBufferLo(void)
@@ -1193,7 +1194,7 @@ s32 IOS_IoctlvFormat(s32 hId,s32 fd,s32 ioctl,const char *format,...)
 	struct _ioctlv *argv;
 	struct _ioctlvfmt_cbdata *cbdata;
 
-	cbdata = __lwp_wkspace_allocate(sizeof(struct _ioctlvfmt_cbdata));
+	//cbdata = __lwp_wkspace_allocate(sizeof(struct _ioctlvfmt_cbdata));
 	if(cbdata==NULL) return IPC_ENOMEM;
 
 	memset(cbdata,0,sizeof(struct _ioctlvfmt_cbdata));
@@ -1202,7 +1203,7 @@ s32 IOS_IoctlvFormat(s32 hId,s32 fd,s32 ioctl,const char *format,...)
 	ret = __ios_ioctlvformat_parse(format,args,cbdata,&cnt_in,&cnt_io,&argv,hId);
 	va_end(args);
 	if(ret<0) {
-		__lwp_wkspace_free(cbdata);
+		//__lwp_wkspace_free(cbdata);
 		return ret;
 	}
 
@@ -1220,7 +1221,7 @@ s32 IOS_IoctlvFormatAsync(s32 hId,s32 fd,s32 ioctl,ipccallback usr_cb,void *usr_
 	struct _ioctlv *argv;
 	struct _ioctlvfmt_cbdata *cbdata;
 
-	cbdata = __lwp_wkspace_allocate(sizeof(struct _ioctlvfmt_cbdata));
+	//cbdata = __lwp_wkspace_allocate(sizeof(struct _ioctlvfmt_cbdata));
 	if(cbdata==NULL) return IPC_ENOMEM;
 
 	memset(cbdata,0,sizeof(struct _ioctlvfmt_cbdata));
@@ -1229,7 +1230,7 @@ s32 IOS_IoctlvFormatAsync(s32 hId,s32 fd,s32 ioctl,ipccallback usr_cb,void *usr_
 	ret = __ios_ioctlvformat_parse(format,args,cbdata,&cnt_in,&cnt_io,&argv,hId);
 	va_end(args);
 	if(ret<0) {
-		__lwp_wkspace_free(cbdata);
+		//__lwp_wkspace_free(cbdata);
 		return ret;
 	}
 

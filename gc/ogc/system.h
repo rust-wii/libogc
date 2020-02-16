@@ -41,8 +41,6 @@ distribution.
 #include <gctypes.h>
 #include <gcutil.h>
 #include <time.h>
-#include <ogc/lwp_queue.h>
-#include "gx_struct.h"
 
 #define SYS_BASE_CACHED					(0x80000000)
 #define SYS_BASE_UNCACHED				(0xC0000000)
@@ -189,63 +187,12 @@ struct _syssramex {
 	u8 __padding1[4];
 } ATTRIBUTE_PACKED;
 
-typedef void (*alarmcallback)(syswd_t alarm,void *cb_arg);
-
-typedef struct _sys_fontheader sys_fontheader;
-
-struct _sys_fontheader {
-	u16 font_type;
-	u16 first_char;
-	u16 last_char;
-	u16 inval_char;
-	u16 asc;
-	u16 desc;
-	u16 width;
-	u16 leading;
-    u16 cell_width;
-    u16 cell_height;
-    u32 sheet_size;
-    u16 sheet_format;
-    u16 sheet_column;
-    u16 sheet_row;
-    u16 sheet_width;
-    u16 sheet_height;
-    u16 width_table;
-    u32 sheet_image;
-    u32 sheet_fullsize;
-    u8  c0;
-    u8  c1;
-    u8  c2;
-    u8  c3;
-} ATTRIBUTE_PACKED;
-
-typedef void (*resetcallback)(u32 irq, void* ctx);
-typedef void (*powercallback)(void);
-typedef s32 (*resetfunction)(s32 final);
-typedef struct _sys_resetinfo sys_resetinfo;
-
-struct _sys_resetinfo {
-	lwp_node node;
-	resetfunction func;
-	u32 prio;
-};
-
 /*! \fn void SYS_Init(void)
 \deprecated Performs basic system initialization such as EXI init etc. This function is called from within the crt0 startup code.
 
 \return none
 */
 void SYS_Init(void);
-
-
-/*!
- * \fn void* SYS_AllocateFramebuffer(GXRModeObj *rmode)
- * \brief Allocate cacheline aligned memory for the external framebuffer based on the rendermode object.
- * \param[in] rmode pointer to the video/render mode configuration
- *
- * \return pointer to the framebuffer's startaddress. <b><i>NOTE:</i></b> Address returned is aligned to a 32byte boundery!
- */
-void* SYS_AllocateFramebuffer(GXRModeObj *rmode);
 
 
 void SYS_ProtectRange(u32 chan,void *addr,u32 bytes,u32 cntrl);
@@ -255,65 +202,7 @@ void SYS_StopPMC(void);
 void SYS_ResetPMC(void);
 
 
-/*! \fn s32 SYS_CreateAlarm(syswd_t *thealarm)
-\brief Create/initialize sysalarm structure
-\param[in] thealarm pointer to the handle to store the created alarm context identifier
-
-\return 0 on succuess, non-zero on error
-*/
-s32 SYS_CreateAlarm(syswd_t *thealarm);
-
-
-/*! \fn s32 SYS_SetAlarm(syswd_t thealarm,const struct timespec *tp,alarmcallback cb)
-\brief Set the alarm parameters for a one-shot alarm, add to the list of alarms and start.
-\param[in] thealarm identifier to the alarm context to be initialize for a one-shot alarm
-\param[in] tp pointer to timespec structure holding the time to fire the alarm
-\param[in] cb pointer to callback which is called when the alarm fires.
-
-\return 0 on succuess, non-zero on error
-*/
-s32 SYS_SetAlarm(syswd_t thealarm,const struct timespec *tp,alarmcallback cb,void *cbarg);
-
-
-/*! \fn s32 SYS_SetPeriodicAlarm(syswd_t thealarm,const struct timespec *tp_start,const struct timespec *tp_period,alarmcallback cb)
-\brief Set the alarm parameters for a periodioc alarm, add to the list of alarms and start. The alarm and interval persists as long as SYS_CancelAlarm() isn't called.
-\param[in] thealarm identifier to the alarm context to be initialized for a periodic alarm
-\param[in] tp_start pointer to timespec structure holding the time to fire first time the alarm
-\param[in] tp_period pointer to timespec structure holding the interval for all following alarm triggers.
-\param[in] cb pointer to callback which is called when the alarm fires.
-
-\return 0 on succuess, non-zero on error
-*/
-s32 SYS_SetPeriodicAlarm(syswd_t thealarm,const struct timespec *tp_start,const struct timespec *tp_period,alarmcallback cb,void *cbarg);
-
-
-/*! \fn s32 SYS_RemoveAlarm(syswd_t thealarm)
-\brief Remove the given alarm context from the list of contexts and destroy it
-\param[in] thealarm identifier to the alarm context to be removed and destroyed
-
-\return 0 on succuess, non-zero on error
-*/
-s32 SYS_RemoveAlarm(syswd_t thealarm);
-
-
-/*! \fn s32 SYS_CancelAlarm(syswd_t thealarm)
-\brief Cancel the alarm, but do not remove from the list of contexts.
-\param[in] thealarm identifier to the alram context to be canceled
-
-\return 0 on succuess, non-zero on error
-*/
-s32 SYS_CancelAlarm(syswd_t thealarm);
-
-
-void SYS_SetWirelessID(u32 chan,u32 id);
-u32 SYS_GetWirelessID(u32 chan);
-u32 SYS_GetFontEncoding(void);
-u32 SYS_InitFont(sys_fontheader *font_data);
-void SYS_GetFontTexture(s32 c,void **image,s32 *xpos,s32 *ypos,s32 *width);
-void SYS_GetFontTexel(s32 c,void *image,s32 pos,s32 stride,s32 *width);
 void SYS_ResetSystem(s32 reset,u32 reset_code,s32 force_menu);
-void SYS_RegisterResetFunc(sys_resetinfo *info);
-void SYS_UnregisterResetFunc(sys_resetinfo *info);
 void SYS_SwitchFiber(u32 arg0,u32 arg1,u32 arg2,u32 arg3,u32 pc,u32 newsp);
 
 void* SYS_GetArena1Lo(void);
@@ -322,10 +211,6 @@ void* SYS_GetArena1Hi(void);
 void SYS_SetArena1Hi(void *newHi);
 u32 SYS_GetArena1Size(void);
 
-resetcallback SYS_SetResetCallback(resetcallback cb);
-
-u32 SYS_ResetButtonDown(void);
-
 #if defined(HW_RVL)
 u32 SYS_GetHollywoodRevision(void);
 void* SYS_GetArena2Lo(void);
@@ -333,14 +218,7 @@ void SYS_SetArena2Lo(void *newLo);
 void* SYS_GetArena2Hi(void);
 void SYS_SetArena2Hi(void *newHi);
 u32 SYS_GetArena2Size(void);
-powercallback SYS_SetPowerCallback(powercallback cb);
 #endif
-
-/* \fn u64 SYS_Time(void)
-\brief Returns the current time in ticks since 2000 (proper Dolphin/Wii time)
-\return ticks since 2000
-*/
-u64 SYS_Time(void);
 
 void kprintf(const char *str, ...);
 

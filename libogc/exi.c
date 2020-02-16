@@ -60,7 +60,7 @@ distribution.
 
 
 struct _lck_dev {
-	lwp_node node;
+//	lwp_node node;
 	u32 dev;
 	EXICallback unlockcb;
 };
@@ -77,11 +77,11 @@ typedef struct _exibus_priv {
 	u32 lck_cnt;
 	u32 exi_id;
 	u64 exi_idtime;
-	lwp_queue lckd_dev;
+//	lwp_queue lckd_dev;
 	u32 lckd_dev_bits;
 } exibus_priv;
 
-static lwp_queue _lckdev_queue;
+//static lwp_queue _lckdev_queue;
 static struct _lck_dev lckdevs[EXI_LOCK_DEVS];
 static exibus_priv eximap[EXI_MAX_CHANNELS];
 static u64 last_exi_idtime[EXI_MAX_CHANNELS];
@@ -142,7 +142,7 @@ static void __exi_initmap(exibus_priv *exim)
 	s32 i;
 	exibus_priv *m;
 
-	__lwp_queue_initialize(&_lckdev_queue,lckdevs,EXI_LOCK_DEVS,sizeof(struct _lck_dev));
+//	__lwp_queue_initialize(&_lckdev_queue,lckdevs,EXI_LOCK_DEVS,sizeof(struct _lck_dev));
 
 	for(i=0;i<EXI_MAX_CHANNELS;i++) {
 		m = &exim[i];
@@ -157,7 +157,7 @@ static void __exi_initmap(exibus_priv *exim)
 		m->lck_cnt = 0;
 		m->lockeddev = 0;
 		m->lckd_dev_bits = 0;
-		__lwp_queue_init_empty(&m->lckd_dev);
+//		__lwp_queue_init_empty(&m->lckd_dev);
 	}
 }
 
@@ -240,13 +240,13 @@ s32 EXI_Lock(s32 nChn,s32 nDev,EXICallback unlockCB)
 	_CPU_ISR_Disable(level);
 	if(exi->flags&EXI_FLAG_LOCKED) {
 		if(unlockCB && !(exi->lckd_dev_bits&(1<<nDev))) {
-			lckd = (struct _lck_dev*)__lwp_queue_getI(&_lckdev_queue);
+//			lckd = (struct _lck_dev*)__lwp_queue_getI(&_lckdev_queue);
 			if(lckd) {
 				exi->lck_cnt++;
 				exi->lckd_dev_bits |= (1<<nDev);
 				lckd->dev = nDev;
 				lckd->unlockcb = unlockCB;
-				__lwp_queue_appendI(&exi->lckd_dev,&lckd->node);
+//				__lwp_queue_appendI(&exi->lckd_dev,&lckd->node);
 			}
 		}
 		_CPU_ISR_Restore(level);
@@ -285,8 +285,8 @@ s32 EXI_Unlock(s32 nChn)
 	}
 
 	exi->lck_cnt--;
-	lckd = (struct _lck_dev*)__lwp_queue_getI(&exi->lckd_dev);
-	__lwp_queue_appendI(&_lckdev_queue,&lckd->node);
+//	lckd = (struct _lck_dev*)__lwp_queue_getI(&exi->lckd_dev);
+//	__lwp_queue_appendI(&_lckdev_queue,&lckd->node);
 
 	cb = lckd->unlockcb;
 	dev = lckd->dev;
