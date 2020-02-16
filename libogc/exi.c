@@ -37,7 +37,7 @@ distribution.
 #include "spinlock.h"
 #include "exi.h"
 
-//#define _EXI_DEBUG
+#define _EXI_DEBUG
 
 #define EXI_LOCK_DEVS				32
 

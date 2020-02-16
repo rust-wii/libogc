@@ -33,11 +33,11 @@ distribution.
 #include <stdlib.h>
 #include "asm.h"
 #include "processor.h"
-#include "lwp_threads.h"
-#include "lwp_watchdog.h"
+//#include "lwp_threads.h"
+//#include "lwp_watchdog.h"
 #include "context.h"
 
-//#define _DECEX_DEBUG
+#define _DECEX_DEBUG
 
 #ifdef _DECEX_DEBUG
 extern int printk(const char *fmt,...);
@@ -55,5 +55,5 @@ void c_decrementer_handler(frame_context *ctx)
 #ifdef _DECEX_DEBUG
 	printk("c_decrementer_handler(%d)\n",_wd_ticks_since_boot);
 #endif
-	__lwp_wd_tickle_ticks();
+	//__lwp_wd_tickle_ticks();
 }
