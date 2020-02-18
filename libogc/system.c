@@ -27,7 +27,7 @@ distribution.
 
 -------------------------------------------------------------*/
 
-//#define DEBUG_SYSTEM
+#define DEBUG_SYSTEM
 
 #include <stdlib.h>
 #include <string.h>
@@ -35,26 +35,16 @@ distribution.
 #include <malloc.h>
 #include <sys/iosupport.h>
 
-#include "asm.h"
 #include "irq.h"
 #include "exi.h"
-#if defined(HW_RVL)
 #include "ipc.h"
 #include "ios.h"
 #include "stm.h"
 #include "es.h"
 #include "conf.h"
-#endif
 #include "cache.h"
-//#include "video.h"
 #include "system.h"
 #include "sys_state.h"
-//#include "lwp_threads.h"
-//#include "lwp_priority.h"
-//#include "lwp_watchdog.h"
-//#include "lwp_wkspace.h"
-//#include "lwp_objmgr.h"
-//#include "lwp_config.h"
 #include "libversion.h"
 
 #define SYSMEM1_SIZE				0x01800000
@@ -65,7 +55,7 @@ distribution.
 
 // DSPCR bits
 #define DSPCR_DSPRESET			    0x0800        // Reset DSP
-#define DSPCR_DSPDMA				    0x0200        // ARAM dma in progress, if set
+#define DSPCR_DSPDMA				0x0200        // ARAM dma in progress, if set
 #define DSPCR_DSPINTMSK			    0x0100        // * interrupt mask   (RW)
 #define DSPCR_DSPINT			    0x0080        // * interrupt active (RWC)
 #define DSPCR_ARINTMSK			    0x0040
@@ -104,28 +94,15 @@ typedef struct _yay0header {
 	unsigned int chunks_offset ATTRIBUTE_PACKED;
 } yay0header;
 
-//static lwp_queue sys_reset_func_queue;
 static u32 system_initialized = 0;
-//static lwp_objinfo sys_alarm_objects;
+static u32 __sys_resetdown = 0;
 
 static void *__sysarena1lo = NULL;
 static void *__sysarena1hi = NULL;
-
-#if defined(HW_RVL)
 static void *__sysarena2lo = NULL;
 static void *__sysarena2hi = NULL;
 static void *__ipcbufferlo = NULL;
 static void *__ipcbufferhi = NULL;
-#endif
-
-static void __RSWDefaultHandler(u32 irq, void* ctx);
-//static resetcallback __RSWCallback = NULL;
-#if defined(HW_RVL)
-//static void __POWDefaultHandler(void);
-//static powercallback __POWCallback = NULL;
-
-static u32 __sys_resetdown = 0;
-#endif
 
 static vu16* const _viReg = (u16*)0xCC002000;
 static vu32* const _piReg = (u32*)0xCC003000;
@@ -192,10 +169,8 @@ extern u8 __gxregs[];
 extern u8 __text_start[];
 extern u8 __isIPL[];
 extern u8 __Arena1Lo[], __Arena1Hi[];
-#if defined(HW_RVL)
 extern u8 __Arena2Lo[], __Arena2Hi[];
 extern u8 __ipcbufferLo[], __ipcbufferHi[];
-#endif
 
 u8 *__argvArena1Lo = (u8*)0xdeadbeef;
 
@@ -313,11 +288,6 @@ static void __doreboot(u32 resetcode,s32 force_menu)
 static void __MEMInterruptHandler(u32 irq, void* ctx)
 {
 	_memReg[16] = 0;
-}
-
-static void __RSWDefaultHandler(u32 irq, void* ctx)
-{
-
 }
 
 #if defined(HW_RVL)

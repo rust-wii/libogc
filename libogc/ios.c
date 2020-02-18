@@ -44,7 +44,7 @@ distribution.
 #define IOS_HEAP_SIZE 0x1000
 #define MAX_IPC_RETRIES 400
 
-//#define DEBUG_IOS
+#define DEBUG_IOS
 
 #define IOS_MAX_VERSION 61
 #define IOS_MIN_VERSION 28

@@ -82,7 +82,7 @@ OGCOBJ		:=	\
 			decrementer_handler.o	\
 			ipc.o ogc_crt0.o \
 			console_font_8x16.o timesupp.o \
-			sbrk.o kprintf.o stm.o ios.o es.o isfs.o argv.o
+			sbrk.o kprintf.o stm.o ios.o es.o isfs.o
 
 all: wii cube
 
@@ -124,7 +124,6 @@ gc/ogc/libversion.h : Makefile
 
 #---------------------------------------------------------------------------------
 $(OGCLIB).a: $(OGCOBJ)
-$(BTELIB).a: $(BTEOBJ)
 #---------------------------------------------------------------------------------
 
 .PHONY: libs wii cube install-headers install dist docs
@@ -134,21 +133,9 @@ install-headers:
 #---------------------------------------------------------------------------------
 	@mkdir -p $(INCDIR)
 	@mkdir -p $(INCDIR)/ogc/machine
-	@mkdir -p $(INCDIR)/bte
-	@mkdir -p $(INCDIR)/wiiuse
-	@mkdir -p $(INCDIR)/modplay
-	@mkdir -p $(INCDIR)/sdcard
-	@mkdir -p $(INCDIR)/di
-	@mkdir -p $(INCDIR)/wiikeyboard
 	@cp ./gc/*.h $(INCDIR)
 	@cp ./gc/ogc/*.h $(INCDIR)/ogc
 	@cp ./gc/ogc/machine/*.h $(INCDIR)/ogc/machine
-	@cp ./gc/bte/*.h $(INCDIR)/bte
-	@cp ./gc/wiiuse/*.h $(INCDIR)/wiiuse
-	@cp ./gc/modplay/*.h $(INCDIR)/modplay
-	@cp ./gc/sdcard/*.h $(INCDIR)/sdcard
-	@cp ./gc/di/*.h $(INCDIR)/di
-	@cp ./gc/wiikeyboard/*.h $(INCDIR)/wiikeyboard
 
 #---------------------------------------------------------------------------------
 install: wii cube install-headers
@@ -168,16 +155,7 @@ dist: wii cube install-headers
 	@tar -cvjf libogc-$(VERSTRING).tar.bz2 include lib libogc_license.txt
 
 
-LIBRARIES	:=	$(OGCLIB).a  $(MODLIB).a $(MADLIB).a $(DBLIB).a \
-				$(TINYSMBLIB).a $(ASNDLIB).a $(AESNDLIB).a $(ISOLIB).a
-
-ifeq ($(PLATFORM),cube)
-LIBRARIES	+=	$(BBALIB).a
-endif
-ifeq ($(PLATFORM),wii)
-LIBRARIES	+=	$(BTELIB).a $(WIIUSELIB).a $(DILIB).a $(WIIKEYBLIB).a
-endif
-
+LIBRARIES	:=	$(OGCLIB).a 
 #---------------------------------------------------------------------------------
 libs: $(LIBRARIES)
 #---------------------------------------------------------------------------------
@@ -189,6 +167,7 @@ clean:
 	rm -fr $(DEPS)
 	rm -fr $(LIBS)
 	rm -fr $(INCDIR)
+	rm -rf docs
 	rm -f *.map
 
 #---------------------------------------------------------------------------------
